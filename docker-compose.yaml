@@ -1,0 +1,81 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cloudgames-mssql
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "SenhaForte123!"
+      MSSQL_PID: Developer
+    volumes:
+      - mssql_data:/var/opt/mssql
+    networks:
+      - cloudgames-network
+    healthcheck:
+      # Usa sqlcmd do PATH; testa apenas login sa e SELECT 1
+      test: ["CMD-SHELL", "sqlcmd -S localhost,1433 -U sa -P \"SenhaForte123!\" -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: cloudgames-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - cloudgames-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloudgames-api
+    ports:
+      - "5055:5055"                    # HOST:CONTAINER
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:5055" # API ouvindo na 5055 dentro do container
+
+      ConnectionStrings__SetupConnection: "Server=mssql,1433;Database=dbFIAPCloudGames;User Id=sa;Password=SenhaForte123!;TrustServerCertificate=True;"
+      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=dbFIAPCloudGames;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;"
+
+      Jwt__Key: "chave-secreta-super-forte-123456"
+      Jwt__Issuer: "CloudGamesAPI"
+      Jwt__Audience: "CloudGamesAPIClient"
+
+      Secrets__Password: "TqgX6tPq1f5jLw9bC3yZk2uR8hV0nE6sQ4mD7pJ1cFo="
+
+      RabbitMq__HostName: "rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: "guest"
+      RabbitMq__Password: "guest"
+      RabbitMq__ExchangeName: "cloudgames.topic"
+    depends_on:
+      mssql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cloudgames-network
+
+networks:
+  cloudgames-network:
+    driver: bridge
+
+volumes:
+  mssql_data:
+  rabbitmq_data:
