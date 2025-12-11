@@ -13,7 +13,6 @@ services:
     networks:
       - cloudgames-network
     healthcheck:
-      # Usa sqlcmd do PATH; testa apenas login sa e SELECT 1
       test: ["CMD-SHELL", "sqlcmd -S localhost,1433 -U sa -P \"SenhaForte123!\" -Q \"SELECT 1\" || exit 1"]
       interval: 10s
       timeout: 5s
@@ -45,10 +44,10 @@ services:
       dockerfile: Dockerfile
     container_name: cloudgames-api
     ports:
-      - "5055:5055"                    # HOST:CONTAINER
+      - "5055:5055"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: "http://+:5055" # API ouvindo na 5055 dentro do container
+      ASPNETCORE_URLS: "http://+:5055"
 
       ConnectionStrings__SetupConnection: "Server=mssql,1433;Database=dbFiapCloudGamesUser;User Id=sa;Password=SenhaForte123!;TrustServerCertificate=True;"
       ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=dbFiapCloudGamesUser;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;"
@@ -65,16 +64,15 @@ services:
       RabbitMq__Password: "guest"
       RabbitMq__ExchangeName: "cloudgames.topic"
     depends_on:
-      mssql:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+      - mssql
+      - rabbitmq
     networks:
       - cloudgames-network
 
 networks:
   cloudgames-network:
     driver: bridge
+    name: cloudgames-network
 
 volumes:
   mssql_data:

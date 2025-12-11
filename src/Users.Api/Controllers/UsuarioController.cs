@@ -21,6 +21,7 @@ namespace Users.Api.Controllers
 		}
 
 		[HttpPost("CadastrarUsuario")]
+		[AllowAnonymous]
 		public async Task<IActionResult> CadastrarUsuario([FromBody] UsuarioCadastroDto usuario)
 		{
 			var result = await service.CriarAsync(usuario, false);
@@ -41,7 +42,6 @@ namespace Users.Api.Controllers
 				: BadRequest(result.Message);
 		}
 
-		[AllowAnonymous]
 		[HttpGet("Listar")]
 		public async Task<IActionResult> Listar()
 		{

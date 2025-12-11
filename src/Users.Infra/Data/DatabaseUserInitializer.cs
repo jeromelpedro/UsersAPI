@@ -21,9 +21,6 @@ namespace Users.Infra.Data
 				// Garante que o banco de dados exista. Se não existir, ele será criado.
 				setupContext.Database.EnsureCreated();
 
-				// Aplica as migrações pendentes (se houver)
-				if (setupContext.Database.GetPendingMigrations().Any())
-					setupContext.Database.Migrate();
 				// Informações do login e usuário que queremos criar
 				var loginName = "usuario_app";
 				var loginPassword = "SenhaForte123!";
