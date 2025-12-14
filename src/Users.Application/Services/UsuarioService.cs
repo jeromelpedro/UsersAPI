@@ -35,7 +35,8 @@ namespace Users.Application.Services
 
 			await _repository.AdicionarAsync(usuarioEntity);
 
-			await _mqPublisher.PublishAsync("UserCreatedEvent", new { usuarioEntity.Id, usuarioEntity.Nome, usuarioEntity.Email });
+			await _mqPublisher.PublishAsync("UserCreatedEvent", 
+				new UserCreatedEventDto {  Id = usuarioEntity.Id, Nome = usuarioEntity.Nome, Email = usuarioEntity.Email });
 
 			return (true, "Usuário criado com sucesso.", new { usuarioEntity.Id });
 		}

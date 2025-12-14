@@ -33,7 +33,7 @@ namespace Users.Application.Services
 				new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
 				new Claim(ClaimTypes.Role, user.Role),
 				new Claim(ClaimTypes.Name, user.Nome),
-				new Claim("Id", user.Id)
+				new Claim("Id", user.Id.ToString())
 			};
 
 			var token = new JwtSecurityToken(
