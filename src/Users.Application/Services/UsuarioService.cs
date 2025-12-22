@@ -8,9 +8,9 @@ using Users.Domain.Interfaces.MessageBus;
 
 namespace Users.Application.Services
 {
-	public class UsuarioService(IUsuarioRepository _repository, IRabbitMqPublisher _mqPublisher) : IUsuarioService
-	{
-		public async Task<(bool Success, string Message, object Result)> CriarAsync(UsuarioCadastroDto usuario, bool isAdmin)
+    public class UsuarioService(IUsuarioRepository _repository, IRabbitMqPublisher _mqPublisher) : IUsuarioService
+    {
+        public async Task<(bool Success, string Message, Usuario? Result)> CriarAsync(UsuarioCadastroDto usuario, bool isAdmin)
 		{
 			var emailCheck = UsuarioValidator.ValidarEmail(usuario.Email);
 			if (!emailCheck.IsValid)
@@ -35,10 +35,10 @@ namespace Users.Application.Services
 
 			await _repository.AdicionarAsync(usuarioEntity);
 
-			await _mqPublisher.PublishAsync("UserCreatedEvent", 
-				new UserCreatedEventDto {  Id = usuarioEntity.Id, Nome = usuarioEntity.Nome, Email = usuarioEntity.Email });
+            await _mqPublisher.PublishAsync("UserCreatedEvent",
+                new UserCreatedEventDto { Id = usuarioEntity.Id, Nome = usuarioEntity.Nome, Email = usuarioEntity.Email });
 
-			return (true, "Usuário criado com sucesso.", new { usuarioEntity.Id });
+            return (true, "Usuário criado com sucesso.", usuarioEntity);
 		}
 
 		public async Task<(bool Success, string Message)> AlterarSenha(AlterarSenhaInputDto input)

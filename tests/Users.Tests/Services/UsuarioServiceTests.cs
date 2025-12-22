@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using Moq;
+using Xunit;
 using Users.Application.Services;
 using Users.Domain.Dto;
 using Users.Domain.Entity;
@@ -20,6 +23,10 @@ namespace Users.Tests.Services
 			Environment.SetEnvironmentVariable("Secrets__Password", Convert.ToBase64String(new byte[32]));
 			_repositoryMock = new Mock<IUsuarioRepository>();
 			_rabbitMqPublisher = new Mock<IRabbitMqPublisher>();
+			// Evita side-effects de publicação durante os testes
+			_rabbitMqPublisher
+				.Setup(m => m.PublishAsync<object>(It.IsAny<string>(), It.IsAny<object>()))
+				.Returns(Task.CompletedTask);
 			_service = new UsuarioService(_repositoryMock.Object, _rabbitMqPublisher.Object);
 		}
 
@@ -42,9 +49,9 @@ namespace Users.Tests.Services
 			var result = await _service.CriarAsync(usuarioDto, false);
 
 			Assert.True(result.Success);
-			Assert.NotNull(result.Result);
-			Assert.Equal(usuarioDto.Email, result.Result.Email);
-			Assert.Equal("User", result.Result.Role);
+			var created = Assert.IsType<Users.Domain.Entity.Usuario>(result.Result);
+			Assert.Equal(usuarioDto.Email, created.Email);
+			Assert.Equal("User", created.Role);
 			Assert.Equal("Usuário criado com sucesso.", result.Message);
 
 			_repositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<Usuario>()), Times.Once);
@@ -69,9 +76,9 @@ namespace Users.Tests.Services
 			var result = await _service.CriarAsync(usuarioDto, true);
 
 			Assert.True(result.Success);
-			Assert.NotNull(result.Result);
-			Assert.Equal(usuarioDto.Email, result.Result.Email);
-			Assert.Equal("Admin", result.Result.Role);
+			var created = Assert.IsType<Users.Domain.Entity.Usuario>(result.Result);
+			Assert.Equal(usuarioDto.Email, created.Email);
+			Assert.Equal("Admin", created.Role);
 			Assert.Equal("Usuário criado com sucesso.", result.Message);
 
 			_repositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<Usuario>()), Times.Once);
@@ -111,7 +118,7 @@ namespace Users.Tests.Services
 
 			var usuario = new Usuario
 			{
-				Id = "1",
+				Id = Guid.NewGuid(),
 				Nome = "Usuário",
 				Email = "usuario@teste.com",
 				Senha = "SenhaAntiga1!",
@@ -144,7 +151,7 @@ namespace Users.Tests.Services
 
 			var usuario = new Usuario
 			{
-				Id = "1",
+				Id = Guid.NewGuid(),
 				Nome = "Usuário",
 				Email = "usuario@teste.com",
 				Senha = "SenhaDiferente1!",
@@ -167,8 +174,8 @@ namespace Users.Tests.Services
 		{
 			var usuarios = new List<Usuario>
 			{
-				new Usuario { Id = "1", Nome = "A", Email = "a@a.com", Senha = "Senha1!", Role = "User" },
-				new Usuario { Id = "2", Nome = "B", Email = "b@b.com", Senha = "Senha2!", Role = "User" }
+				new Usuario { Id = Guid.NewGuid(), Nome = "A", Email = "a@a.com", Senha = "Senha1!", Role = "User" },
+				new Usuario { Id = Guid.NewGuid(), Nome = "B", Email = "b@b.com", Senha = "Senha2!", Role = "User" }
 			};
 
 			_repositoryMock.Setup(r => r.ListarAsync())
@@ -186,17 +193,19 @@ namespace Users.Tests.Services
 		{
 			var usuario = new Usuario
 			{
-				Id = "3",
+				Id = Guid.NewGuid(),
 				Nome = "C",
 				Email = "c@c.com",
 				Senha = "Senha3!",
 				Role = "User"
 			};
 
-			_repositoryMock.Setup(r => r.ObterPorIdAsync(usuario.Id))
+			var id = usuario.Id.ToString();
+
+			_repositoryMock.Setup(r => r.ObterPorIdAsync(id))
 				.ReturnsAsync(usuario);
 
-			var encontrado = await _service.ObterPorIdAsync(usuario.Id);
+			var encontrado = await _service.ObterPorIdAsync(id);
 
 			Assert.NotNull(encontrado);
 			Assert.Equal(usuario.Email, encontrado.Email);
@@ -218,20 +227,22 @@ namespace Users.Tests.Services
 		{
 			var usuario = new Usuario
 			{
-				Id = "4",
+				Id = Guid.NewGuid(),
 				Nome = "D",
 				Email = "d@d.com",
 				Senha = "Senha4!",
 				Role = "User"
 			};
 
-			_repositoryMock.Setup(r => r.ObterPorIdAsync(usuario.Id))
+			var id = usuario.Id.ToString();
+
+			_repositoryMock.Setup(r => r.ObterPorIdAsync(id))
 				.ReturnsAsync(usuario);
 
 			_repositoryMock.Setup(r => r.RemoverAsync(usuario))
 				.Returns(Task.CompletedTask);
 
-			var result = await _service.ExcluirAsync(usuario.Id);
+			var result = await _service.ExcluirAsync(id);
 
 			Assert.True(result.Success);
 			Assert.Equal("Usuário excluído com sucesso.", result.Message);
