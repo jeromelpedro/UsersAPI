@@ -39,7 +39,7 @@ namespace Users.Application
 
 			services.AddDbContext<AppDbContext>(options =>
 					options.UseSqlServer(
-					configuration.GetConnectionString("DefaultConnection"),
+					Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection"),
 					sqlOptions => sqlOptions.EnableRetryOnFailure()
 				)
 			);

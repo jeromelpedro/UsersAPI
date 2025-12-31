@@ -42,15 +42,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: cloudgames-api
+    container_name: cloudgames-user-api
     ports:
       - "5055:5055"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: "http://+:5055"
 
-      ConnectionStrings__SetupConnection: "Server=mssql,1433;Database=dbFiapCloudGamesUser;User Id=sa;Password=SenhaForte123!;TrustServerCertificate=True;"
-      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=dbFiapCloudGamesUser;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;"
+      ConnectionStrings__SetupConnection:   "Server=mssql,1433;Database=dbUser;User Id=sa;Password=SenhaForte123!;TrustServerCertificate=True;"
+      ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=dbUser;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;"
 
       Jwt__Key: "chave-secreta-super-forte-123456"
       Jwt__Issuer: "CloudGamesAPI"
@@ -58,7 +58,7 @@ services:
 
       Secrets__Password: "TqgX6tPq1f5jLw9bC3yZk2uR8hV0nE6sQ4mD7pJ1cFo="
 
-      RabbitMq__HostName: "rabbitmq"
+      RabbitMq__HostName: "cloudgames-rabbitmq"
       RabbitMq__Port: "5672"
       RabbitMq__UserName: "guest"
       RabbitMq__Password: "guest"
