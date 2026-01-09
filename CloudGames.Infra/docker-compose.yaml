@@ -1,0 +1,219 @@
+# =============================================================================
+# CloudGames - Docker Compose Unificado
+# =============================================================================
+# Este arquivo sobe toda a infraestrutura e os 4 microsserviços:
+# - UsersAPI       (porta 5055)
+# - CatalogAPI     (porta 5063)
+# - NotificationsAPI (porta 5056)
+# - PaymentsAPI    (porta 5058)
+#
+# Uso: docker compose up -d --build
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # INFRAESTRUTURA
+  # ===========================================================================
+
+  # SQL Server - Banco de dados do UsersAPI
+  mssql-users:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cloudgames-mssql-users
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "SenhaForte123!"
+      MSSQL_PID: Developer
+    volumes:
+      - mssql_users_data:/var/opt/mssql
+    networks:
+      - cloudgames-network
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "SenhaForte123!" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # SQL Server - Banco de dados do CatalogAPI
+  mssql-catalog:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cloudgames-mssql-catalog
+    ports:
+      - "1434:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "SenhaForte123!"
+      MSSQL_PID: Developer
+    volumes:
+      - mssql_catalog_data:/var/opt/mssql
+    networks:
+      - cloudgames-network
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "SenhaForte123!" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # RabbitMQ - Message Broker
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: cloudgames-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - cloudgames-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ===========================================================================
+  # MICROSSERVIÇOS
+  # ===========================================================================
+
+  # Users API - Gerenciamento de usuários e autenticação
+  users-api:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    container_name: cloudgames-users-api
+    ports:
+      - "5055:5055"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:5055"
+
+      ConnectionStrings__SetupConnection: "Server=mssql-users,1433;Database=dbUser;User Id=sa;Password=SenhaForte123!;TrustServerCertificate=True;"
+      ConnectionStrings__DefaultConnection: "Server=mssql-users,1433;Database=dbUser;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;"
+
+      Jwt__Key: "chave-secreta-super-forte-123456"
+      Jwt__Issuer: "CloudGamesAPI"
+      Jwt__Audience: "CloudGamesAPIClient"
+
+      Secrets__Password: "TqgX6tPq1f5jLw9bC3yZk2uR8hV0nE6sQ4mD7pJ1cFo="
+
+      RabbitMq__HostName: "cloudgames-rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: "guest"
+      RabbitMq__Password: "guest"
+      RabbitMq__ExchangeName: "cloudgames.topic"
+    depends_on:
+      mssql-users:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cloudgames-network
+
+  # Catalog API - Gerenciamento do catálogo de jogos
+  catalog-api:
+    build:
+      context: ../../CatalogAPI
+      dockerfile: Dockerfile
+    container_name: cloudgames-catalog-api
+    ports:
+      - "5063:5063"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:5063"
+
+      ConnectionStrings__SetupConnection: "Server=mssql-catalog,1433;Database=master;User Id=sa;Password=SenhaForte123!;TrustServerCertificate=True;"
+      ConnectionStrings__DefaultConnection: "Server=mssql-catalog,1433;Database=dbCatalog;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;"
+
+      RabbitMq__HostName: "cloudgames-rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: "guest"
+      RabbitMq__Password: "guest"
+      RabbitMq__ExchangeName: "cloudgames.topic"
+    depends_on:
+      mssql-catalog:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cloudgames-network
+
+  # Notifications API - Serviço de notificações
+  notifications-api:
+    build:
+      context: ../../NotificationsAPI
+      dockerfile: Dockerfile
+    container_name: cloudgames-notifications-api
+    ports:
+      - "5056:5056"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:5056"
+
+      RabbitMq__HostName: "cloudgames-rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: "guest"
+      RabbitMq__Password: "guest"
+      RabbitMq__ExchangeName: "cloudgames.topic"
+      RabbitMq__QueueNameUserCreated: "UserCreatedEvent"
+      RabbitMq__QueueNamePaymentProcessed: "PaymentProcessedEvent"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cloudgames-network
+
+  # Payments API - Processamento de pagamentos
+  payments-api:
+    build:
+      context: ../../PaymentsAPI
+      dockerfile: Dockerfile
+    container_name: cloudgames-payments-api
+    ports:
+      - "5058:5058"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:5058"
+
+      Jwt__Key: "chave-secreta-super-forte-123456"
+      Jwt__Issuer: "CloudGamesAPI"
+      Jwt__Audience: "CloudGamesAPIClient"
+
+      RabbitMq__HostName: "cloudgames-rabbitmq"
+      RabbitMq__Port: "5672"
+      RabbitMq__UserName: "guest"
+      RabbitMq__Password: "guest"
+      RabbitMq__ExchangeName: "cloudgames.topic"
+      RabbitMq__QueueNameOrderPlaced: "OrderPlacedEvent"
+      RabbitMq__QueueNamePaymentProcessed: "PaymentProcessedEvent"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cloudgames-network
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  cloudgames-network:
+    driver: bridge
+    name: cloudgames-network
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  mssql_users_data:
+    name: cloudgames-mssql-users-data
+  mssql_catalog_data:
+    name: cloudgames-mssql-catalog-data
+  rabbitmq_data:
+    name: cloudgames-rabbitmq-data
