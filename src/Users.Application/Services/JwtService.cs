@@ -6,7 +6,7 @@ using System.Text;
 using Users.Application.Interfaces;
 using Users.Domain.Entity;
 using Users.Domain.Interfaces;
-using Users.Application.Utils;
+using Users.Domain.Utils;
 
 namespace Users.Application.Services
 {

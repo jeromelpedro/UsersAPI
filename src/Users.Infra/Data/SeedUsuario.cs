@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Users.Domain.Entity;
+using Users.Domain.Utils;
 
 namespace Users.Infra.Data
 {
@@ -10,12 +11,14 @@ namespace Users.Infra.Data
 			using var scope = serviceProvider.CreateScope();
 			var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-			if (!context.Usuarios.Any(u => u.Email == "teste@teste.com"))
+			if (!context.Usuarios.Any(u => u.Email == "teste@cloudgames.com.br"))
 			{
+				var senha = "SenhaForte123!".Encrypt();
+
 				context.Usuarios.Add(new Usuario
 				{
-					Email = "teste@teste.com",
-					Senha = "SenhaForte123!",
+					Email = "teste@cloudgames.com.br",
+					Senha = senha,
 					Nome = "Administrador",
 					Role = "Admin",
 					DataCriacaoUsuario = DateTime.Now,

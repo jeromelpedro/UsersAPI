@@ -1,10 +1,10 @@
 ﻿using Users.Application.Interfaces;
-using Users.Application.Utils;
 using Users.Application.Validators;
 using Users.Domain.Dto;
 using Users.Domain.Entity;
 using Users.Domain.Interfaces;
 using Users.Domain.Interfaces.MessageBus;
+using Users.Domain.Utils;
 
 namespace Users.Application.Services
 {
