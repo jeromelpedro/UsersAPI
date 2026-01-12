@@ -12,9 +12,8 @@ namespace Users.Api.Configurations
 				// Informações da API
 				c.SwaggerDoc("v1", new OpenApiInfo
 				{
-					Title = "FIAP Cloud Games - Tech Challenge - Fase 1",
-					Version = "v1",
-					Description = "API REST em .NET 9 para gerenciar usuários, jogos, biblioteca de jogos e promoções.",
+					Title = "Users.Api",
+					Version = "1.0"
 				});
 
 				//JWT

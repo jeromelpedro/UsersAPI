@@ -6,10 +6,10 @@ using Users.Domain.Dto;
 namespace Users.Api.Controllers
 {
 	[ApiController]
-	[Route("api/[controller]")]
+	[Route("api/Users")]
 	public class UsuarioController(IUsuarioService service) : BaseController
 	{
-		[HttpPost("CadastrarUsuarioAdmin")]
+		[HttpPost("RegisterUserAdmin")]
 		[Authorize(Policy = "Admin")]
 		public async Task<IActionResult> CadastrarUsuarioAdmin([FromBody] UsuarioCadastroDto usuario)
 		{
@@ -20,7 +20,7 @@ namespace Users.Api.Controllers
 				: BadRequest(result.Message);
 		}
 
-		[HttpPost("CadastrarUsuario")]
+		[HttpPost("RegisterUser")]
 		[AllowAnonymous]
 		public async Task<IActionResult> CadastrarUsuario([FromBody] UsuarioCadastroDto usuario)
 		{
@@ -31,7 +31,7 @@ namespace Users.Api.Controllers
 				: BadRequest(result.Message);
 		}
 
-		[HttpPost("AlterarSenha")]
+		[HttpPost("ChangePassword")]
 		[AllowAnonymous]
 		public async Task<IActionResult> AlterarSenha([FromBody] AlterarSenhaInputDto input)
 		{
@@ -42,14 +42,14 @@ namespace Users.Api.Controllers
 				: BadRequest(result.Message);
 		}
 
-		[HttpGet("Listar")]
+		[HttpGet("List")]
 		public async Task<IActionResult> Listar()
 		{
 			var usuarios = await service.ListarAsync();
 			return Ok(usuarios);
 		}
 
-		[HttpGet("ListarPorId/{id}")]
+		[HttpGet("ListById/{id}")]
 		public async Task<IActionResult> ListarPorId(string id)
 		{
 			var usuario = await service.ObterPorIdAsync(id);
@@ -58,7 +58,7 @@ namespace Users.Api.Controllers
 				: NotFound("Usuário não encontrado.");
 		}		
 
-		[HttpDelete("Excluir/{id}")]
+		[HttpDelete("Delete/{id}")]
 		[Authorize(Policy = "Admin")]
 		public async Task<IActionResult> Excluir(string id)
 		{
