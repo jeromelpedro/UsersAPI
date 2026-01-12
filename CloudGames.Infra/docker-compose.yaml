@@ -163,7 +163,7 @@ services:
       RabbitMq__Password: "guest"
       RabbitMq__ExchangeName: "cloudgames.topic"
       RabbitMq__QueueNameUserCreated: "UserCreatedEvent"
-      RabbitMq__QueueNamePaymentProcessed: "PaymentProcessedEvent"
+      RabbitMq__QueueNamePaymentProcessed: "PaymentProcessedEvent-Notifications"
     depends_on:
       rabbitmq:
         condition: service_healthy
