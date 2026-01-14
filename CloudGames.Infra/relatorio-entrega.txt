@@ -1,0 +1,33 @@
+# Tech Challenge - Fase 2
+
+## Nome do grupo: Grupo 36
+
+## Participantes:
+
+Tony Abrunhosa
+tonyabrunhosa@hotmail.com
+@tonyabrunhosa
+
+Diego Cesar Domingos
+diegodomingos09@hotmail.com
+@diegodomingos
+
+Pedro Fellipe Jeromel
+jeromel.pedro@gmail.com
+@pedrojeromel
+
+Gustavo Rosolem
+gustavo.rosolem@hotmail.com
+@gustavorosolem
+
+## Documentação e Repositórios:
+
+Users: https://github.com/pedrojeromel/UsersAPI
+Catalog: https://github.com/pedrojeromel/CatalogAPI
+Notifications: https://github.com/pedrojeromel/NotificationsAPI
+Payments: https://github.com/pedrojeromel/PaymentsAPI
+Orquestraçâo: https://github.com/pedrojeromel/UsersAPI/tree/main/CloudGames.Infra
+
+## Vídeo:
+
+[LINK DO VIDEO]
