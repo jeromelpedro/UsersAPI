@@ -16,14 +16,14 @@ spec:
     spec:
       containers:
         - name: mssql
-          image: mcr.microsoft.com/mssql/server:2019-latest
+          image: mcr.microsoft.com/mssql/server:2022-latest
           ports:
             - containerPort: 1433
           env:
             - name: ACCEPT_EULA
               value: "Y"
             - name: SA_PASSWORD
-              value: "SuaSenha123!"
+              value: "SenhaForte123!"
           readinessProbe:
             tcpSocket:
               port: 1433
