@@ -30,4 +30,4 @@ Orquestraçâo: https://github.com/pedrojeromel/UsersAPI/tree/main/CloudGames.In
 
 ## Vídeo:
 
-[LINK DO VIDEO]
+https://youtu.be/cyWnstXuBVA
