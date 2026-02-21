@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Users.Application.Interfaces;
 using Users.Domain.Entity;
 using Users.Domain.Interfaces;
@@ -10,15 +11,27 @@ using Users.Domain.Utils;
 
 namespace Users.Application.Services
 {
-	public class JwtService(IConfiguration _config, IUsuarioRepository _usuarioRepository) : IJwtService
+	public class JwtService(IConfiguration _config, IUsuarioRepository _usuarioRepository, ILogger<JwtService>? _logger = null) : IJwtService
 	{
 		public async Task<string?> Autenticar(string email, string senha)
 		{
+			_logger?.LogInformation("Autenticar iniciada para email={email} | TraceId:{traceId}", email, Environment.NewLine);
+
 			var user = await _usuarioRepository.ObterPorEmailAsync(email);
 
-			if (user == null || !senha.Encrypt().Equals(user.Senha))
+			if (user == null)
+			{
+				_logger?.LogWarning("Autenticar: usuário não encontrado para email={email}", email);
 				return null;
+			}
 
+			if (!senha.Encrypt().Equals(user.Senha))
+			{
+				_logger?.LogWarning("Autenticar: senha inválida para email={email}", email);
+				return null;
+			}
+
+			_logger?.LogInformation("Autenticar sucesso para email={email} Id={id}", email, user.Id);
 			return GerarToken(user);
 		}
 
