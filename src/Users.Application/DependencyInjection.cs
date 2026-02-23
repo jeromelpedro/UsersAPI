@@ -37,12 +37,20 @@ namespace Users.Application
 		{
 			services.AddScoped<JwtService>();
 
-			services.AddDbContext<AppDbContext>(options =>
-					options.UseSqlServer(
+			services.AddScoped<AuditSaveChangesInterceptor>();
+
+			services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+			{
+				options.UseSqlServer(
 					Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection"),
 					sqlOptions => sqlOptions.EnableRetryOnFailure()
-				)
-			);
+				);
+
+				// Register interceptor from DI so it can access HttpContext and logger
+				var interceptor = serviceProvider.GetService<Users.Infra.Data.AuditSaveChangesInterceptor>();
+				if (interceptor != null)
+					options.AddInterceptors(interceptor);
+			});
 
 			// Configurar RabbitMQ a partir das variáveis de ambiente
 			services.Configure<RabbitMqSettings>(options =>

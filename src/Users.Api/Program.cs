@@ -1,4 +1,5 @@
 using Serilog;
+using OpenTelemetry.Trace;
 using Users.Api.Configurations;
 using Users.Api.Middlewares;
 using Users.Application;
@@ -9,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
 	.MinimumLevel.Information()
 	.Enrich.FromLogContext()
+	.Enrich.With(new Users.Api.Serilog.ActivityEnricher())
 	.WriteTo.Console()
 	.CreateLogger();
 
@@ -20,6 +22,15 @@ builder.Services.AddOpenApi();
 builder.Services.AddSwaggerConfiguration();
 builder.Services.ResolveDependencyInjection(builder.Configuration);
 builder.Services.AddAuthConfiguration(builder.Configuration);
+
+// Application Insights (reads CONNECTION STRING from APPLICATIONINSIGHTS_CONNECTION_STRING env var)
+builder.Services.AddApplicationInsightsTelemetry();
+
+// Note: Application Insights SDK is registered above and will collect requests/dependencies.
+// If you want full OpenTelemetry instrumentation with OTLP exporters, we can enable it later.
+
+// Http context accessor required by Audit interceptor
+builder.Services.AddHttpContextAccessor();
 
 
 var app = builder.Build();

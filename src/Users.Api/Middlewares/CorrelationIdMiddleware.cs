@@ -25,8 +25,7 @@ namespace Users.Api.Middlewares
 
             context.Response.OnStarting(() =>
             {
-                if (!context.Response.Headers.ContainsKey(HeaderKey))
-                    context.Response.Headers.Add(HeaderKey, correlationId);
+                context.Response.Headers[HeaderKey] = correlationId;
                 return Task.CompletedTask;
             });
 
