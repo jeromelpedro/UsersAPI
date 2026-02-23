@@ -11,7 +11,7 @@ namespace Users.Infra.Repositories
 		public async Task<Usuario?> ObterPorIdAsync(string id)
 		{
 			_logger?.LogDebug("ObterPorIdAsync: buscando id={id}", id);
-			return await _db.Usuarios.FindAsync(id);
+			return await _db.Usuarios.FirstOrDefaultAsync(x => x.Id == Guid.Parse(id));
 		}
 
 		public async Task<Usuario?> ObterPorEmailAsync(string email)

@@ -7,8 +7,9 @@ using Users.Infra.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration()
-	.ReadFrom.Configuration(builder.Configuration)
+	.MinimumLevel.Information()
 	.Enrich.FromLogContext()
+	.WriteTo.Console()
 	.CreateLogger();
 
 builder.Logging.ClearProviders();
