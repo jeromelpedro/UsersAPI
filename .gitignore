@@ -46,3 +46,4 @@ packages/
 TestResult.xml
 nunit-*.xml
 /.vs
+/src/Users.Api/appsettings.Development.json
