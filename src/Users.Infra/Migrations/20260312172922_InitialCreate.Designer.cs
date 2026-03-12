@@ -9,11 +9,11 @@ using Users.Infra.Data;
 
 #nullable disable
 
-namespace Users.Infra.Migrations.Audit
+namespace Users.Infra.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260223030417_AddAuditLog")]
-    partial class AddAuditLog
+    [Migration("20260312172922_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
