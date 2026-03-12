@@ -22,7 +22,9 @@ namespace Users.Api.Middlewares
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Ocorreu um erro inesperado.");
+				var traceId = context.TraceIdentifier;
+				var correlationId = context.Items[CorrelationIdMiddleware.HeaderKey] as string ?? context.Request.Headers[CorrelationIdMiddleware.HeaderKey].FirstOrDefault();
+				_logger.LogError(ex, "Unhandled exception for {path} | TraceId:{traceId} | CorrelationId:{correlationId}", context.Request?.Path.Value, traceId, correlationId);
 
 				context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 				context.Response.ContentType = "application/json";
@@ -30,7 +32,9 @@ namespace Users.Api.Middlewares
 				var result = JsonSerializer.Serialize(new
 				{
 					error = "Ocorreu um erro interno no servidor.",
-					details = ex.Message
+					details = ex.Message,
+					traceId,
+					correlationId
 				});
 
 				await context.Response.WriteAsync(result);

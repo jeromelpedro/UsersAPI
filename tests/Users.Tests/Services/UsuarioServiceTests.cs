@@ -1,8 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
 using Users.Application.Services;
 using Users.Domain.Dto;
 using Users.Domain.Entity;
@@ -14,7 +12,9 @@ namespace Users.Tests.Services
 	public class UsuarioServiceTests
 	{
 		private Mock<IUsuarioRepository> _repositoryMock;
-		private Mock<IRabbitMqPublisher> _rabbitMqPublisher;
+		private Mock<IServiceBus> _serviceBusMock;
+				private IConfiguration _configuration;
+				private Mock<ILogger<UsuarioService>> _loggerMock;
 		private UsuarioService _service;
 
 		public UsuarioServiceTests()
@@ -22,12 +22,19 @@ namespace Users.Tests.Services
 			// Define uma chave padrão para os testes (32 bytes em Base64)
 			Environment.SetEnvironmentVariable("Secrets__Password", Convert.ToBase64String(new byte[32]));
 			_repositoryMock = new Mock<IUsuarioRepository>();
-			_rabbitMqPublisher = new Mock<IRabbitMqPublisher>();
+			_serviceBusMock = new Mock<IServiceBus>();
 			// Evita side-effects de publicação durante os testes
-			_rabbitMqPublisher
-				.Setup(m => m.PublishAsync<object>(It.IsAny<string>(), It.IsAny<object>()))
-				.Returns(Task.CompletedTask);
-			_service = new UsuarioService(_repositoryMock.Object, _rabbitMqPublisher.Object);
+			_serviceBusMock.Setup(m => m.PublishAsync(It.IsAny<string>(), It.IsAny<object>())).Returns(Task.CompletedTask);
+
+			// Mock configuration with ServiceBus:UserCreatedEvent
+			var inMemorySettings = new Dictionary<string, string> {
+				{"ServiceBus:UserCreatedEvent", "UserCreatedEvent"}
+			};
+			_configuration = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
+
+			_loggerMock = new Mock<ILogger<UsuarioService>>();
+
+			_service = new UsuarioService(_repositoryMock.Object, _serviceBusMock.Object, _configuration, _loggerMock.Object);
 		}
 
 		[Fact]
@@ -54,7 +61,8 @@ namespace Users.Tests.Services
 			Assert.Equal("User", created.Role);
 			Assert.Equal("Usuário criado com sucesso.", result.Message);
 
-			_repositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<Usuario>()), Times.Once);
+            _repositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<Usuario>()), Times.Once);
+			_serviceBusMock.Verify(m => m.PublishAsync("UserCreatedEvent", It.IsAny<UserCreatedEventDto>()), Times.Once);
 		}
 
 		[Fact]
@@ -81,7 +89,8 @@ namespace Users.Tests.Services
 			Assert.Equal("Admin", created.Role);
 			Assert.Equal("Usuário criado com sucesso.", result.Message);
 
-			_repositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<Usuario>()), Times.Once);
+            _repositoryMock.Verify(r => r.AdicionarAsync(It.IsAny<Usuario>()), Times.Once);
+			_serviceBusMock.Verify(m => m.PublishAsync("UserCreatedEvent", It.IsAny<UserCreatedEventDto>()), Times.Once);
 		}
 
 		[Fact]
@@ -109,16 +118,18 @@ namespace Users.Tests.Services
 		[Fact]
 		public async Task AlterarSenha_DeveAlterarSenha_QuandoDadosValidos()
 		{
+            var id = Guid.NewGuid();
+
 			var input = new AlterarSenhaInputDto
 			{
-				IdUsuario = "1",
+				IdUsuario = id.ToString(),
 				SenhaAntiga = "SenhaAntiga1!",
 				SenhaNova = "NovaSenha1!"
 			};
 
 			var usuario = new Usuario
 			{
-				Id = Guid.NewGuid(),
+				Id = id,
 				Nome = "Usuário",
 				Email = "usuario@teste.com",
 				Senha = "SenhaAntiga1!",
@@ -142,16 +153,18 @@ namespace Users.Tests.Services
 		[Fact]
 		public async Task AlterarSenha_DeveFalhar_QuandoSenhaAntigaInvalida()
 		{
+            var id = Guid.NewGuid();
+
 			var input = new AlterarSenhaInputDto
 			{
-				IdUsuario = "1",
+				IdUsuario = id.ToString(),
 				SenhaAntiga = "NovaSenha1!",
 				SenhaNova = "OutraNova1!"
 			};
 
 			var usuario = new Usuario
 			{
-				Id = Guid.NewGuid(),
+				Id = id,
 				Nome = "Usuário",
 				Email = "usuario@teste.com",
 				Senha = "SenhaDiferente1!",

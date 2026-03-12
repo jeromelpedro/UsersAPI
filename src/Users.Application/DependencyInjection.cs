@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Azure.Messaging.ServiceBus;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Users.Application.Interfaces;
@@ -6,6 +7,7 @@ using Users.Application.Services;
 using Users.Domain.Dto;
 using Users.Domain.Interfaces;
 using Users.Domain.Interfaces.MessageBus;
+using Users.Domain.Utils;
 using Users.Infra.Data;
 using Users.Infra.MessageBus;
 using Users.Infra.Repositories;
@@ -37,12 +39,20 @@ namespace Users.Application
 		{
 			services.AddScoped<JwtService>();
 
-			services.AddDbContext<AppDbContext>(options =>
-					options.UseSqlServer(
-					Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection"),
+			services.AddScoped<AuditSaveChangesInterceptor>();
+
+			services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+			{
+				options.UseSqlServer(
+					configuration.GetConnectionString("DefaultConnection"),					
 					sqlOptions => sqlOptions.EnableRetryOnFailure()
-				)
-			);
+				);
+
+				// Register interceptor from DI so it can access HttpContext and logger
+				var interceptor = serviceProvider.GetService<Users.Infra.Data.AuditSaveChangesInterceptor>();
+				if (interceptor != null)
+					options.AddInterceptors(interceptor);
+			});
 
 			// Configurar RabbitMQ a partir das variáveis de ambiente
 			services.Configure<RabbitMqSettings>(options =>
@@ -55,6 +65,17 @@ namespace Users.Application
 			});
 
 			services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+			services.AddSingleton<IServiceBus, ServiceBus>();
+			services.AddServiceBus(configuration);
+		}
+
+		private static void AddServiceBus(this IServiceCollection services, IConfiguration configuration)
+		{
+			services.AddSingleton<ServiceBusClient>(provider =>
+			{
+				var connectionString = configuration.GetConfigValue("ServiceBus:ConnectionString");
+				return new ServiceBusClient(connectionString);
+			});
 		}
 	}
 }
