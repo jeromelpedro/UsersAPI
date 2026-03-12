@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Azure.Messaging.ServiceBus;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Users.Application.Interfaces;
@@ -6,6 +7,7 @@ using Users.Application.Services;
 using Users.Domain.Dto;
 using Users.Domain.Interfaces;
 using Users.Domain.Interfaces.MessageBus;
+using Users.Domain.Utils;
 using Users.Infra.Data;
 using Users.Infra.MessageBus;
 using Users.Infra.Repositories;
@@ -42,7 +44,7 @@ namespace Users.Application
 			services.AddDbContext<AppDbContext>((serviceProvider, options) =>
 			{
 				options.UseSqlServer(
-					Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection"),
+					configuration.GetConnectionString("DefaultConnection"),					
 					sqlOptions => sqlOptions.EnableRetryOnFailure()
 				);
 
@@ -63,6 +65,17 @@ namespace Users.Application
 			});
 
 			services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+			services.AddSingleton<IServiceBus, ServiceBus>();
+			services.AddServiceBus(configuration);
+		}
+
+		private static void AddServiceBus(this IServiceCollection services, IConfiguration configuration)
+		{
+			services.AddSingleton<ServiceBusClient>(provider =>
+			{
+				var connectionString = configuration.GetConfigValue("ServiceBus:ConnectionString");
+				return new ServiceBusClient(connectionString);
+			});
 		}
 	}
 }

@@ -32,10 +32,9 @@ builder.Services.AddApplicationInsightsTelemetry();
 // Http context accessor required by Audit interceptor
 builder.Services.AddHttpContextAccessor();
 
-
 var app = builder.Build();
 
-DatabaseUserInitializer.EnsureDatabaseUser(builder.Configuration);
+//DatabaseUserInitializer.EnsureDatabaseUser(builder.Configuration);
 SeedUsuario.Seed(app.Services);
 
 if (app.Environment.IsDevelopment())

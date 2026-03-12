@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Users.Application.Interfaces;
 using Users.Application.Validators;
 using Users.Domain.Dto;
@@ -9,7 +10,7 @@ using Users.Domain.Utils;
 
 namespace Users.Application.Services
 {
-    public class UsuarioService(IUsuarioRepository _repository, IRabbitMqPublisher _mqPublisher, ILogger<UsuarioService>? _logger = null) : IUsuarioService
+    public class UsuarioService(IUsuarioRepository _repository, IServiceBus _serviceBus, IConfiguration configuration, ILogger<UsuarioService>? _logger = null) : IUsuarioService
     {
         public async Task<(bool Success, string Message, Usuario? Result)> CriarAsync(UsuarioCadastroDto usuario, bool isAdmin)
 		{
@@ -50,7 +51,7 @@ namespace Users.Application.Services
 
 			_logger?.LogInformation("Usuário criado: Id={id} Email={email}", usuarioEntity.Id, usuarioEntity.Email);
 
-			await _mqPublisher.PublishAsync("UserCreatedEvent",
+			await _serviceBus.PublishAsync(configuration["ServiceBus:UserCreatedEvent"],
 				new UserCreatedEventDto { Id = usuarioEntity.Id, Nome = usuarioEntity.Nome, Email = usuarioEntity.Email });
 
 			_logger?.LogInformation("Evento UserCreated publicado para Id={id}", usuarioEntity.Id);
