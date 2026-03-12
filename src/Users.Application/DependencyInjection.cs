@@ -44,7 +44,7 @@ namespace Users.Application
 			services.AddDbContext<AppDbContext>((serviceProvider, options) =>
 			{
 				options.UseSqlServer(
-					configuration.GetConnectionString("DefaultConnection"),					
+					configuration.GetConnectionString("SqlConnection"),					
 					sqlOptions => sqlOptions.EnableRetryOnFailure()
 				);
 
@@ -66,6 +66,7 @@ namespace Users.Application
 
 			services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
 			services.AddSingleton<IServiceBus, ServiceBus>();
+			Security.Configure(configuration);
 			services.AddServiceBus(configuration);
 		}
 

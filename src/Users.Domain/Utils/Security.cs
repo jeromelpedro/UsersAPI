@@ -1,13 +1,21 @@
-﻿using System.Security.Cryptography;
+﻿using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Users.Domain.Utils
 {
 	public static class Security
 	{
+		private static IConfiguration _configuration;
+
+		public static void Configure(IConfiguration configuration)
+		{
+			_configuration = configuration;
+		}
+
 		private static byte[] GetKeyBytes()
 		{
-			var base64 = Environment.GetEnvironmentVariable("Secrets__Password");
+			var base64 = _configuration.GetConfigValue("Secrets:Password");
 
 			if (string.IsNullOrWhiteSpace(base64))
 				throw new InvalidOperationException(

@@ -51,7 +51,7 @@ namespace Users.Application.Services
 
 			_logger?.LogInformation("Usuário criado: Id={id} Email={email}", usuarioEntity.Id, usuarioEntity.Email);
 
-			await _serviceBus.PublishAsync(configuration["ServiceBus:UserCreatedEvent"],
+			await _serviceBus.PublishAsync(configuration.GetConfigValue("ServiceBus:QueueNameUserCreated"),
 				new UserCreatedEventDto { Id = usuarioEntity.Id, Nome = usuarioEntity.Nome, Email = usuarioEntity.Email });
 
 			_logger?.LogInformation("Evento UserCreated publicado para Id={id}", usuarioEntity.Id);
