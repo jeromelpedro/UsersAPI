@@ -29,17 +29,15 @@ namespace Users.Infra.Data
 	{
 		public AppDbContext CreateDbContext(string[] args)
 		{
-			// Aqui vamos pegar a connection string de variável de ambiente,
-			// que é simples, seguro e comum no mercado.
-
-			var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+			// adicionar aqui a connectionString  para executar o migrations
+			var connectionString = "";
 
 			if (string.IsNullOrWhiteSpace(connectionString))
 				throw new InvalidOperationException(
 					"Variável de ambiente 'ConnectionStrings__DefaultConnection' não definida.");
 
 			var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-			optionsBuilder.UseSqlServer("Server=(LocalDB)\\MSSQLLocalDB;Database=dbUser;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;");
+			optionsBuilder.UseSqlServer(connectionString);
 
 			return new AppDbContext(optionsBuilder.Options);
 		}
