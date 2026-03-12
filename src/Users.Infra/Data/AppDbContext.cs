@@ -9,12 +9,19 @@ namespace Users.Infra.Data
 		public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
 		public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			base.OnModelCreating(modelBuilder);
 
-			modelBuilder.Entity<Usuario>();				
+			modelBuilder.Entity<Usuario>();
+			modelBuilder.Entity<AuditLog>(b =>
+			{
+				b.Property(a => a.Timestamp).HasDefaultValueSql("GETUTCDATE()");
+				b.Property(a => a.TableName).IsRequired();
+				b.Property(a => a.Action).IsRequired();
+			});
 		}
 	}
 
@@ -32,7 +39,7 @@ namespace Users.Infra.Data
 					"Variável de ambiente 'ConnectionStrings__DefaultConnection' não definida.");
 
 			var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-			optionsBuilder.UseSqlServer(connectionString);
+			optionsBuilder.UseSqlServer("Server=(LocalDB)\\MSSQLLocalDB;Database=dbUser;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;");
 
 			return new AppDbContext(optionsBuilder.Options);
 		}

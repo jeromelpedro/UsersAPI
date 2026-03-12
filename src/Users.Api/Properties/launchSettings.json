@@ -8,7 +8,7 @@
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5200"
     },
-    "https": {
+    "Development": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
