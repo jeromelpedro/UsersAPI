@@ -1,4 +1,4 @@
-# Tech Challenge - Fase 2
+# Tech Challenge - Fase 3
 
 ## Nome do grupo: Grupo 38
 
@@ -26,6 +26,7 @@ Users: https://github.com/pedrojeromel/UsersAPI
 Catalog: https://github.com/pedrojeromel/CatalogAPI
 Notifications: https://github.com/pedrojeromel/NotificationsAPI
 Payments: https://github.com/pedrojeromel/PaymentsAPI
+
 Desenho da Arquitetura Serveless: https://github.com/pedrojeromel/UsersAPI/tree/main/CloudGames.Monitor/arquitetura-serveless.gif
 
 ## Vídeo:
