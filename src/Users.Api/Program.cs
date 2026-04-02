@@ -37,8 +37,8 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
-//DatabaseUserInitializer.EnsureDatabaseUser(builder.Configuration);
-// SeedUsuario.Seed(app.Services);
+// DatabaseUserInitializer.EnsureDatabaseUser(builder.Configuration);
+SeedUsuario.Seed(app.Services);
 
 if (app.Environment.IsDevelopment())
 	app.MapOpenApi();
