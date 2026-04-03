@@ -28,6 +28,7 @@ Esta API fornece endpoints para autenticação (`Login`) e para operações CRUD
 - Entity Framework Core (SQL Server)
 - Docker / Docker Compose
 - RabbitMQ
+- Redis (cache de autenticação)
 - JWT (autenticação)
 - Swagger (documentação)
 
@@ -52,6 +53,8 @@ Principais chaves:
 	- `Secrets:Password`
 - RabbitMQ
 	- `RabbitMq:HostName`, `RabbitMq:Port`, `RabbitMq:UserName`, `RabbitMq:Password`, `RabbitMq:ExchangeName`
+- Redis
+	- `Redis:Host` — host do Redis (fallback padrão: `localhost`)
 
 Valores padrão do repositório (exemplos):
 - SA SQL Server: `SenhaForte123!`
@@ -164,6 +167,21 @@ curl -X POST "http://localhost:5055/api/login?Email=teste@teste.com&Senha=SenhaF
 - O `docker-compose` expõe SQL Server na porta 1433.
 - A classe `DatabaseUserInitializer` usa `ConnectionStrings:SetupConnection` para garantir que o banco exista, aplicar migrações e criar o login `usuario_app` com role `db_owner`.
 - `SeedUsuario` adiciona `teste@teste.com` como Admin (se não existir).
+
+## Redis (cache de autenticação)
+O login usa Redis como cache antes da consulta ao banco para reduzir latência em autenticações repetidas.
+
+Fluxo atual na autenticação:
+- A API monta uma chave no formato `[email]_[senhaEncrypt]` (senha criptografada com `Encrypt`).
+- Faz `GET` no Redis para essa chave.
+- Se existir valor (cache hit), desserializa o objeto `user` e já gera o JWT sem consultar o banco.
+- Se não existir (cache miss), segue o fluxo normal: busca usuário no banco e valida senha.
+- Em caso de sucesso no fluxo normal, salva no Redis o objeto `user` serializado nessa mesma chave.
+
+Detalhes de implementação:
+- Valor armazenado: objeto `user` serializado em JSON.
+- TTL da chave: 1 horas.
+- Se o Redis estiver indisponível, o login continua funcionando via banco (fallback sem quebra de fluxo).
 
 ## RabbitMQ
 - Porta AMQP: 5672

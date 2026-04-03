@@ -38,6 +38,21 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: cloudgames-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cloudgames-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -51,6 +66,7 @@ services:
 
       ConnectionStrings__SetupConnection:   "Server=mssql,1433;Database=dbUser;User Id=sa;Password=SenhaForte123!;TrustServerCertificate=True;"
       ConnectionStrings__DefaultConnection: "Server=mssql,1433;Database=dbUser;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;"
+      ConnectionStrings__SqlConnection: "Server=mssql,1433;Database=dbUser;User Id=usuario_app;Password=SenhaForte123!;TrustServerCertificate=True;"
 
       Jwt__Key: "chave-secreta-super-forte-123456"
       Jwt__Issuer: "CloudGamesAPI"
@@ -63,9 +79,15 @@ services:
       RabbitMq__UserName: "guest"
       RabbitMq__Password: "guest"
       RabbitMq__ExchangeName: "cloudgames.topic"
+
+      ServiceBus__ConnectionString: "Endpoint=sb://localhost/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_HERE"
+      ServiceBus__QueueNameUserCreated: "user-created"
+
+      Redis__Host: "redis"
     depends_on:
       - mssql
       - rabbitmq
+      - redis
     networks:
       - cloudgames-network
 
@@ -77,3 +99,4 @@ networks:
 volumes:
   mssql_data:
   rabbitmq_data:
+  redis_data:

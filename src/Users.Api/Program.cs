@@ -27,7 +27,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog(Log.Logger);
 
-
+builder.Services.AddSingleton<RedisConnection>();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerConfiguration();
@@ -37,7 +37,7 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
-//DatabaseUserInitializer.EnsureDatabaseUser(builder.Configuration);
+// DatabaseUserInitializer.EnsureDatabaseUser(builder.Configuration);
 SeedUsuario.Seed(app.Services);
 
 if (app.Environment.IsDevelopment())
