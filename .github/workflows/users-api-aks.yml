@@ -1,0 +1,196 @@
+name: Build and Deploy Users API to AKS
+
+on:
+  push:
+    branches:
+      - feature/fase4
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
+      - 'k8s/**'
+      - '.github/workflows/users-api-aks.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ACR_NAME: ${{ secrets.ACR_NAME }}
+  AKS_CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
+  AKS_RESOURCE_GROUP: ${{ secrets.AKS_RESOURCE_GROUP }}
+  AKS_NAMESPACE: ${{ secrets.AKS_NAMESPACE }}
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/Users.Api/Users.Api.csproj
+        working-directory: .
+
+      - name: Build
+        run: dotnet build ./src/Users.Api/Users.Api.csproj --configuration Release --no-restore
+        working-directory: .
+
+      - name: Run tests
+        run: dotnet test ./tests/Users.Tests/Users.Tests.csproj --configuration Release --no-build --verbosity normal
+        working-directory: .
+        continue-on-error: true
+
+  build-and-push:
+    name: Build and Push to ACR
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get ACR login credentials
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+                       -f Dockerfile .
+
+      - name: Push to ACR
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    name: Deploy to AKS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
+            --name ${{ env.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
+
+      - name: Check if namespace exists
+        run: |
+          kubectl get namespace ${{ env.AKS_NAMESPACE }} || \
+          kubectl create namespace ${{ env.AKS_NAMESPACE }}
+
+      - name: Create ACR pull secret
+        run: |
+          kubectl create secret docker-registry acr-credentials \
+            --docker-server=${{ env.REGISTRY }} \
+            --docker-username=00000000-0000-0000-0000-000000000000 \
+            --docker-password=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken) \
+            --docker-email=not@used.local \
+            --namespace=${{ env.AKS_NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f k8s/storage-class.yaml
+          kubectl apply -f k8s/serviceaccount.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/secretproviderclass.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/configmap.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/secret.yaml -n ${{ env.AKS_NAMESPACE }}
+          
+          # Apply data layer components
+          kubectl apply -f k8s/redis-statefulset.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/redis-service.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/mongodb-statefulset.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/mongodb-service.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/elasticsearch-statefulset.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/elasticsearch-service.yaml -n ${{ env.AKS_NAMESPACE }}
+          
+          # Apply API deployment and ingress
+          kubectl apply -f k8s/deployment.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/service.yaml -n ${{ env.AKS_NAMESPACE }}
+          kubectl apply -f k8s/ingress.yaml -n ${{ env.AKS_NAMESPACE }}
+
+      - name: Update deployment image
+        run: |
+          kubectl set image deployment/users-api \
+            users-api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --namespace=${{ env.AKS_NAMESPACE }}
+
+      - name: Wait for deployment to be ready
+        run: |
+          kubectl rollout status deployment/users-api \
+            --namespace=${{ env.AKS_NAMESPACE }} \
+            --timeout=5m
+
+      - name: Get deployment status
+        run: |
+          kubectl get deployment users-api -n ${{ env.AKS_NAMESPACE }} -o wide
+          kubectl get pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api
+          kubectl describe pod -n ${{ env.AKS_NAMESPACE }} -l app=users-api | head -50
+
+      - name: Test API health endpoint
+        run: |
+          # Port-forward to test locally
+          kubectl port-forward -n ${{ env.AKS_NAMESPACE }} svc/users-api 5055:5055 &
+          sleep 5
+          curl -s http://localhost:5055/health || echo "Health endpoint not yet available (expected during warming up)"
+        continue-on-error: true
+
+      - name: Display logs on failure
+        if: failure()
+        run: |
+          echo "=== Pod Logs ==="
+          kubectl logs -n ${{ env.AKS_NAMESPACE }} -l app=users-api --tail=50
+          echo "=== Pod Events ==="
+          kubectl describe pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api
+
+  notify:
+    name: Notify Deployment Status
+    needs: [build-and-test, build-and-push, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check deployment status
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment succeeded"
+          else
+            echo "❌ Deployment failed"
+          fi

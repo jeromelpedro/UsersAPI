@@ -2,8 +2,14 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: users-api
+  namespace: users-api
 spec:
-  replicas: 1
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: users-api
@@ -11,15 +17,64 @@ spec:
     metadata:
       labels:
         app: users-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5055"
+        prometheus.io/path: "/metrics"
     spec:
+      serviceAccountName: users-api
       containers:
         - name: users-api
-          image: users-api:latest
-          imagePullPolicy: IfNotPresent
+          image: crfaculdade02fipap.azurecr.io/users-api:latest
+          imagePullPolicy: Always
           ports:
-            - containerPort: 5055
+            - name: http
+              containerPort: 5055
+              protocol: TCP
           envFrom:
-            - configMapRef:
-                name: users-api-config
-            - secretRef:
-                name: users-api-secret
+          - configMapRef:
+              name: users-api-config
+          - secretRef:
+              name: users-api-keyvault-secrets
+          volumeMounts:
+          - name: secrets-store
+            mountPath: "/mnt/secrets-store"
+            readOnly: true
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 5055
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 5055
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: false
+      volumes:
+      - name: secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "users-api-keyvault"
+      imagePullSecrets:
+      - name: acr-credentials
