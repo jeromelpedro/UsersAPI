@@ -16,6 +16,7 @@ env:
   IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   ACR_NAME: ${{ secrets.ACR_NAME }}
   AKS_CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
   AKS_RESOURCE_GROUP: ${{ secrets.AKS_RESOURCE_GROUP }}
@@ -55,7 +56,6 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: read
 
     steps:
@@ -65,13 +65,15 @@ jobs:
       - name: Validate required Azure secrets
         run: |
           test -n "${{ secrets.AZURE_CLIENT_ID }}" || (echo "Missing secret: AZURE_CLIENT_ID" && exit 1)
+          test -n "${{ secrets.AZURE_CLIENT_SECRET }}" || (echo "Missing secret: AZURE_CLIENT_SECRET" && exit 1)
           test -n "${{ secrets.AZURE_TENANT_ID }}" || (echo "Missing secret: AZURE_TENANT_ID" && exit 1)
           test -n "${{ secrets.AZURE_SUBSCRIPTION_ID }}" || (echo "Missing secret: AZURE_SUBSCRIPTION_ID" && exit 1)
 
-      - name: Azure Login (OIDC)
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
@@ -95,7 +97,6 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: read
 
     steps:
@@ -105,13 +106,15 @@ jobs:
       - name: Validate required Azure secrets
         run: |
           test -n "${{ secrets.AZURE_CLIENT_ID }}" || (echo "Missing secret: AZURE_CLIENT_ID" && exit 1)
+          test -n "${{ secrets.AZURE_CLIENT_SECRET }}" || (echo "Missing secret: AZURE_CLIENT_SECRET" && exit 1)
           test -n "${{ secrets.AZURE_TENANT_ID }}" || (echo "Missing secret: AZURE_TENANT_ID" && exit 1)
           test -n "${{ secrets.AZURE_SUBSCRIPTION_ID }}" || (echo "Missing secret: AZURE_SUBSCRIPTION_ID" && exit 1)
 
-      - name: Azure Login (OIDC)
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
