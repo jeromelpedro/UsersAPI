@@ -161,11 +161,17 @@ jobs:
             users-api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
             --namespace=${{ env.AKS_NAMESPACE }}
 
+      - name: Cleanup stuck terminating pods
+        run: |
+          kubectl get pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api --no-headers \
+            | awk '/Terminating/ {print $1}' \
+            | xargs -r kubectl delete pod -n ${{ env.AKS_NAMESPACE }} --force --grace-period=0
+
       - name: Wait for deployment to be ready
         run: |
           kubectl rollout status deployment/users-api \
             --namespace=${{ env.AKS_NAMESPACE }} \
-            --timeout=5m
+            --timeout=10m
 
       - name: Get deployment status
         run: |
@@ -184,10 +190,16 @@ jobs:
       - name: Display logs on failure
         if: failure()
         run: |
+          echo "=== Deployment ==="
+          kubectl get deployment users-api -n ${{ env.AKS_NAMESPACE }} -o wide
+          echo "=== Pods ==="
+          kubectl get pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api -o wide
+          echo "=== Recent Events ==="
+          kubectl get events -n ${{ env.AKS_NAMESPACE }} --sort-by=.lastTimestamp | tail -50
           echo "=== Pod Logs ==="
-          kubectl logs -n ${{ env.AKS_NAMESPACE }} -l app=users-api --tail=50
+          kubectl logs -n ${{ env.AKS_NAMESPACE }} -l app=users-api --tail=50 || true
           echo "=== Pod Events ==="
-          kubectl describe pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api
+          kubectl describe pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api || true
 
   notify:
     name: Notify Deployment Status
