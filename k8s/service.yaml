@@ -5,7 +5,7 @@ metadata:
   labels:
     app: users-api
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app: users-api
   ports:
