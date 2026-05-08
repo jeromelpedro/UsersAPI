@@ -4,7 +4,7 @@ metadata:
   name: users-api
   namespace: users-api
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -36,10 +36,6 @@ spec:
               name: users-api-config
           - secretRef:
               name: users-api-keyvault-secrets
-          volumeMounts:
-          - name: secrets-store
-            mountPath: "/mnt/secrets-store"
-            readOnly: true
           resources:
             requests:
               cpu: 250m
@@ -69,12 +65,5 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
             runAsNonRoot: false
-      volumes:
-      - name: secrets-store
-        csi:
-          driver: secrets-store.csi.k8s.io
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: "users-api-keyvault"
       imagePullSecrets:
       - name: acr-credentials
