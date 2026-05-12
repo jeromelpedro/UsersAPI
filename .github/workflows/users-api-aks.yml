@@ -145,7 +145,6 @@ jobs:
           kubectl apply -f k8s/serviceaccount.yaml -n ${{ env.AKS_NAMESPACE }}
           kubectl apply -f k8s/secretproviderclass.yaml -n ${{ env.AKS_NAMESPACE }}
           kubectl apply -f k8s/configmap.yaml -n ${{ env.AKS_NAMESPACE }}
-          kubectl apply -f k8s/secret.yaml -n ${{ env.AKS_NAMESPACE }}
           
           # Apply data layer components
           kubectl apply -f k8s/redis-statefulset.yaml -n ${{ env.AKS_NAMESPACE }}
