@@ -171,11 +171,34 @@ jobs:
             kubectl delete pod "$pod" -n ${{ env.AKS_NAMESPACE }} --force --grace-period=0 || true
           done
 
+      - name: Debug deployment status before wait
+        run: |
+          echo "=== Checking SecretProviderClass status ==="
+          kubectl get secretproviderclass -n ${{ env.AKS_NAMESPACE }} -o wide || echo "No SecretProviderClass found"
+          
+          echo "=== Checking synchronized secret ==="
+          kubectl get secret users-api-keyvault-secrets -n ${{ env.AKS_NAMESPACE }} -o wide || echo "Secret not yet synchronized"
+          
+          echo "=== Pod status immediately after deployment ==="
+          kubectl get pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api -o wide
+          
+          echo "=== Waiting 15 seconds for pod initialization ==="
+          sleep 15
+
       - name: Wait for deployment to be ready
         run: |
           kubectl rollout status deployment/users-api \
             --namespace=${{ env.AKS_NAMESPACE }} \
-            --timeout=10m
+            --timeout=15m
+
+      - name: Display pod logs during deployment
+        if: failure()
+        run: |
+          echo "=== Real-time pod logs ==="
+          kubectl logs -n ${{ env.AKS_NAMESPACE }} -l app=users-api --all-containers=true --timestamps=true --tail=100 || true
+          
+          echo "=== Pod status ==="
+          kubectl get pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api -o wide
 
       - name: Get deployment status
         run: |
