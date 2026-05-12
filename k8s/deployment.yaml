@@ -36,6 +36,10 @@ spec:
               name: users-api-config
           - secretRef:
               name: users-api-keyvault-secrets
+          volumeMounts:
+          - name: secrets-store-inline
+            mountPath: /mnt/secrets-store
+            readOnly: true
           resources:
             requests:
               cpu: 250m
@@ -67,3 +71,10 @@ spec:
             runAsNonRoot: false
       imagePullSecrets:
       - name: acr-credentials
+      volumes:
+      - name: secrets-store-inline
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: users-api-keyvault

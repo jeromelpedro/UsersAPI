@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Users.Application.Interfaces;
 using Users.Application.Services;
-using Users.Domain.Dto;
 using Users.Domain.Interfaces;
 using Users.Domain.Interfaces.MessageBus;
 using Users.Domain.Utils;
@@ -53,18 +52,6 @@ namespace Users.Application
 				if (interceptor != null)
 					options.AddInterceptors(interceptor);
 			});
-
-			// Configurar RabbitMQ a partir das variáveis de ambiente
-			services.Configure<RabbitMqSettings>(options =>
-			{
-				options.HostName = Environment.GetEnvironmentVariable("RabbitMq__HostName") ?? "localhost";
-				options.Port = int.Parse(Environment.GetEnvironmentVariable("RabbitMq__Port") ?? "5672");
-				options.Username = Environment.GetEnvironmentVariable("RabbitMq__UserName") ?? "guest";
-				options.Password = Environment.GetEnvironmentVariable("RabbitMq__Password") ?? "guest";
-				options.ExchangeName = Environment.GetEnvironmentVariable("RabbitMq__ExchangeName") ?? "cloudgames.topic";
-			});
-
-			services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
 			services.AddSingleton<IServiceBus, ServiceBus>();
 			Security.Configure(configuration);
 			services.AddServiceBus(configuration);
