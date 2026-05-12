@@ -167,23 +167,39 @@ jobs:
 
       - name: Cleanup stuck terminating pods
         run: |
+          echo "=== Force-deleting Terminating pods ==="
           for pod in $(kubectl get pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api --no-headers | awk '/Terminating/ {print $1}'); do
+            kubectl delete pod "$pod" -n ${{ env.AKS_NAMESPACE }} --force --grace-period=0 || true
+          done
+
+          echo "=== Force-deleting pods stuck in non-ready state (Error/CrashLoop/Pending) ==="
+          for pod in $(kubectl get pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api --no-headers | awk '/Error|CrashLoopBackOff|ErrImagePull|ImagePullBackOff|OOMKilled|Init:Error|ContainerCannotRun/ {print $1}'); do
             kubectl delete pod "$pod" -n ${{ env.AKS_NAMESPACE }} --force --grace-period=0 || true
           done
 
       - name: Debug deployment status before wait
         run: |
-          echo "=== Checking SecretProviderClass status ==="
-          kubectl get secretproviderclass -n ${{ env.AKS_NAMESPACE }} -o wide || echo "No SecretProviderClass found"
-          
+          echo "=== SecretProviderClass status ==="
+          kubectl get secretproviderclass -n ${{ env.AKS_NAMESPACE }} -o wide || true
+
           echo "=== Checking synchronized secret ==="
-          kubectl get secret users-api-keyvault-secrets -n ${{ env.AKS_NAMESPACE }} -o wide || echo "Secret not yet synchronized"
-          
-          echo "=== Pod status immediately after deployment ==="
+          kubectl get secret users-api-keyvault-secrets -n ${{ env.AKS_NAMESPACE }} || echo "⚠ Secret NOT synchronized - Key Vault CSI driver may not be authenticated"
+
+          echo "=== Pod list ==="
           kubectl get pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api -o wide
-          
-          echo "=== Waiting 15 seconds for pod initialization ==="
-          sleep 15
+
+          echo "=== Pod describe (events + mounts) ==="
+          kubectl describe pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api | grep -A 20 'Events:' || true
+
+          echo "=== Pod logs (last 30 lines each) ==="
+          for pod in $(kubectl get pods -n ${{ env.AKS_NAMESPACE }} -l app=users-api --no-headers | awk '{print $1}'); do
+            echo "--- Logs for pod: $pod ---"
+            kubectl logs "$pod" -n ${{ env.AKS_NAMESPACE }} --tail=30 --previous 2>/dev/null || \
+            kubectl logs "$pod" -n ${{ env.AKS_NAMESPACE }} --tail=30 2>/dev/null || echo "(no logs available)"
+          done
+
+          echo "=== Waiting 20 seconds for pod initialization ==="
+          sleep 20
 
       - name: Wait for deployment to be ready
         run: |
