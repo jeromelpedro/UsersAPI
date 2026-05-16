@@ -84,11 +84,31 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Resolve version and image tags
+        id: version
+        run: |
+          BASE_VERSION=$(cat VERSION | tr -d '[:space:]')
+          PATCH=${{ github.run_number }}
+          VERSION="${BASE_VERSION}.${PATCH}"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE_TAG="v${VERSION}-${SHORT_SHA}"
+          echo "version=${VERSION}"       >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}"   >> $GITHUB_OUTPUT
+          echo "=== Tags que serão publicadas ==="
+          echo "  :v${VERSION}-${SHORT_SHA}  (exata — use para rollback)"
+          echo "  :v${VERSION}               (semver)"
+          echo "  :latest                    (sempre atual)"
+
       - name: Build Docker image
         run: |
+          BASE_VERSION=$(cat VERSION | tr -d '[:space:]')
+          PATCH=${{ github.run_number }}
+          VERSION="${BASE_VERSION}.${PATCH}"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${VERSION}-${SHORT_SHA} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${VERSION} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             -f Dockerfile \
             --push \
@@ -161,8 +181,12 @@ jobs:
 
       - name: Update deployment image
         run: |
+          BASE_VERSION=$(cat VERSION | tr -d '[:space:]')
+          PATCH=${{ github.run_number }}
+          VERSION="${BASE_VERSION}.${PATCH}"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           kubectl set image deployment/users-api \
-            users-api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            users-api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${VERSION}-${SHORT_SHA} \
             --namespace=${{ env.AKS_NAMESPACE }}
 
       - name: Cleanup stuck terminating pods
